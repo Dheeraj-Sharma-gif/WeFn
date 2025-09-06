@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  email     String       @unique
+  password  String
+  name      String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  widgetLayout WidgetLayout?  
+  widgets   Widget[]     @relation("UserWidgets")
+  tokens    UserToken[]
+}
+
+model Widget {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  desc        String?
+  apiUrl      String
+  refreshSec  Int
+  displayMode String
+  parsedData  Json
+  config      Json 
+  rawData     Json
+  createdAt   DateTime  @default(now())
+   userId      String   @db.ObjectId
+  user        User     @relation("UserWidgets", fields: [userId], references: [id])
+}
+
+model UserToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model WidgetLayout {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  userId  String @db.ObjectId @unique
+  layout  Json
+  user    User   @relation(fields: [userId], references: [id])
+}
