@@ -24,7 +24,7 @@ export function Nav({ children }) {
   const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-
+  
    useEffect(() => setMounted(true), []);
 
   const authedLinks = [

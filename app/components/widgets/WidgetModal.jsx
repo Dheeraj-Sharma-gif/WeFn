@@ -134,40 +134,77 @@ export default function WidgetModal({ onClose, onAdd }) {
     );
   };
 
-  const testApi = async () => {
-    if (!apiUrl) return;
-    setLoading(true);
-    setError("");
+const testApi = async () => {
+  if (!apiUrl) return;
+  setLoading(true);
+  setError("");
 
+  try {
+    // ✅ Step 0: Validate URL format
+    let url;
     try {
-      let data;
-      const cached = localStorage.getItem(apiUrl);
-      if (cached) {
-        data = JSON.parse(cached);
-      } else {
-        const res = await fetch(apiUrl);
-        data = await res.json();
-        localStorage.setItem(apiUrl, JSON.stringify(data));
-      }
-
-      setRawData(data);
-      const parsed = parseResponse(data);
-      if (!parsed || parsed.length === 0) throw new Error("Parser returned no results");
-
-      setParsedData(parsed);
-      setApiTested(true);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to fetch or parse API");
+      url = new URL(apiUrl);
+    } catch {
+      setError("Invalid URL format");
       setParsedData(null);
       setApiTested(false);
-    } finally {
       setLoading(false);
+      return; // stop here instead of throwing
     }
-  };
+
+    let data;
+    const cached = localStorage.getItem(apiUrl);
+    if (cached) {
+      data = JSON.parse(cached);
+    } else {
+      const res = await fetch(url.toString());
+
+      // ✅ Step 1: Check if API actually responded
+      if (!res.ok) {
+        setError(`API request failed with status ${res.status}`);
+        setParsedData(null);
+        setApiTested(false);
+        return;
+      }
+
+      data = await res.json();
+
+      // ✅ Step 2: Check for known error messages
+      if (data["Error Message"] || data["Note"] || Object.keys(data).length === 0) {
+        setError("Invalid or fake API response");
+        setParsedData(null);
+        setApiTested(false);
+        return;
+      }
+
+      localStorage.setItem(apiUrl, JSON.stringify(data));
+    }
+
+    setRawData(data);
+
+    const parsed = parseResponse(data);
+    if (!parsed || parsed.length === 0) {
+      setError("Parser returned no results");
+      setParsedData(null);
+      setApiTested(false);
+      return;
+    }
+
+    setParsedData(parsed);
+    setApiTested(true);
+  } catch (err) {
+    console.error(err);
+    setError("Unexpected error while testing API");
+    setParsedData(null);
+    setApiTested(false);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-start pt-20 z-50">
+    <div className=" inset-0   flex justify-center items-start pt-20 z-50">
       <div className="bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow-lg w-96 max-w-full border border-gray-200 dark:border-neutral-700 transition-colors">
         <h2 className="text-xl font-bold mb-5 text-gray-900 dark:text-gray-100">Add Widget</h2>
 
